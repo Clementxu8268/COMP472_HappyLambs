@@ -1,0 +1,49 @@
+# created by virtualenv automatically
+# Ignore all files in the virtual environment folder
+venv/
+env/
+.venv/
+.env/
+
+# Ignore Python bytecode files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# PyCharm project files
+.idea/
+
+# VS Code settings
+.vscode/
+
+# macOS system files
+.DS_Store
+
+# Windows system files
+Thumbs.db
+
+# Logs
+*.log
+
+# Test and coverage reports
+*.coverage
+*.coveragerc
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Packaging directories
+build/
+dist/
+*.egg-info/
+
+# Python wheel files
+*.whl
+
+# PyInstaller
+*.spec
