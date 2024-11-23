@@ -2,7 +2,7 @@
 
 ## Authors
 - Ke Xu, ID: 40253950, kxu8268@gmail.com
-- Jingyuan Zhang, ID: , jingyuanzhangzjy@gmail.com
+- Jingyuan Zhang, ID: 40257596, jingyuanzhangzjy@gmail.com
 
 ## Overview
 This project is designed to implement COMP472 final project. The program is implemented using Python and is structured for ease of understanding and use.
