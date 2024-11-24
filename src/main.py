@@ -5,14 +5,16 @@ import json
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from torch.utils.data import DataLoader, TensorDataset
 
 # Import related modules
 from utils.feature_extraction import prepare_data, load_pretrained_resnet, extract_features, apply_pca
-from src.models.naive_bayes import NaiveBayes, train_naive_bayes_sklearn
-from utils.eval_utils import evaluate_model, save_model_and_results, print_saved_results
+from models.naive_bayes import NaiveBayes, train_naive_bayes_sklearn
+from utils.eval_utils import evaluate_model, save_model_and_results, print_saved_results, evaluate_mlp
 from utils.report_utils import save_results_as_text
 from models.decision_tree import DecisionTree, train_sklearn_decision_tree
 from evaluate import evaluate_saved_models
+from models.mlp import train_mlp
 
 # Get root path (main.py's path)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -57,7 +59,49 @@ if __name__ == "__main__":
         # Save the results
         results = {}
 
-        # Decision tree training and evluation
+        # MLP part
+        # Train and evaluate MLP
+        print("Training MLP Model...")
+        mlp_model = train_mlp(train_features, train_labels, epochs=10, device=device)
+
+        # Create DataLoader for test set
+        test_dataset = TensorDataset(
+            torch.tensor(test_features, dtype=torch.float32),
+            torch.tensor(test_labels, dtype=torch.long)
+        )
+        test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+        # Evaluate MLP using the dedicated function
+        print("Evaluating MLP Model...")
+        mlp_results = evaluate_mlp(mlp_model, test_loader, device=device)
+
+        # Save results and model
+        save_model_and_results(mlp_model, mlp_results, "MLP")
+        results["MLP"] = mlp_results
+
+        # Experiment with different MLP configurations
+        hidden_layer_configs = [
+            [512, 512],  # Default configuration
+            [512, 256],  # Smaller layers
+            [1024, 512, 256],  # Deeper network
+        ]
+
+        for config in hidden_layer_configs:
+            print(f"\nTraining MLP with hidden layer sizes: {config}...")
+            mlp_model = train_mlp(train_features, train_labels, epochs=10, device=device, hidden_sizes=config)
+
+            # Evaluate MLP Model
+            print(f"Evaluating MLP Model with hidden layer sizes: {config}...")
+            test_dataset = TensorDataset(
+                torch.tensor(test_features, dtype=torch.float32).to(device),
+                torch.tensor(test_labels, dtype=torch.long).to(device)
+            )
+            test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+            mlp_results = evaluate_mlp(mlp_model, test_loader, device=device)
+            save_model_and_results(mlp_model, mlp_results, f"MLP_Hidden_{'_'.join(map(str, config))}")
+
+        # Decision tree part
+        # Decision tree training and evaluation
         print("Training Decision Tree (Python implementation)...")
         dt_python = DecisionTree(max_depth=50)
         dt_python.fit(train_features, train_labels)
@@ -78,6 +122,7 @@ if __name__ == "__main__":
             dt_sklearn_results = evaluate_model(dt_sklearn, test_features, test_labels, model_type="sklearn")
             save_model_and_results(dt_sklearn, dt_sklearn_results, f"DecisionTree_Sklearn_Depth_{depth}")
 
+        # Naive Bayes part
         # Train and evaluate Naive Bayes Python and Numpy edition
         print("Training Naive Bayes (Python and Numpy implementation)...")
         nb_model_python = NaiveBayes()
@@ -95,7 +140,6 @@ if __name__ == "__main__":
 
         # Print current saved models and results
         print_saved_results(CHECKPOINTS_DIR, RESULTS_DIR, True)
-
     else:
         print("\nSkipping retraining. Evaluating saved models...")
         # Load feature
