@@ -8,9 +8,7 @@ from .plot_utils import plot_confusion_matrix
 import pandas as pd  # for CSV file
 
 def evaluate_model(model, test_features, test_labels, model_type="sklearn", test_data_loader=None):
-    """
-    Evaluate models' performance
-    """
+    #Evaluate models' performance
     if model_type == "sklearn":
         # Use Scikit-learn model to predict
         predictions = model.predict(test_features)
@@ -45,6 +43,7 @@ def evaluate_model(model, test_features, test_labels, model_type="sklearn", test
         "f1_score": f1,
         "confusion_matrix": conf_matrix.tolist()  # Make sure for JSON
     }
+
 
 def save_model_and_results(model, results, model_name, model_type="sklearn"):
     """
@@ -143,3 +142,44 @@ def print_saved_results(checkpoints_dir, results_dir, show_confusion_matrix=Fals
             print("No saved results found in results.")
     else:
         print("Results directory does not exist.")
+
+def evaluate_mlp(model, test_loader, device):
+    """
+    Evaluate the performance of an MLP model.
+
+    Args:
+        model (torch.nn.Module): The trained MLP model.
+        test_loader (DataLoader): DataLoader containing the test dataset.
+        device (torch.device): The device (CPU or GPU) to perform evaluation.
+
+    Returns:
+        dict: A dictionary containing accuracy, precision, recall, F1-score, and confusion matrix.
+    """
+    model.eval()
+    predictions, true_labels = [], []
+
+    with torch.no_grad():
+        for inputs, labels in test_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs = model(inputs)
+            preds = torch.argmax(outputs, dim=1)
+            predictions.extend(preds.cpu().numpy())
+            true_labels.extend(labels.cpu().numpy())
+
+    predictions = np.array(predictions)
+    true_labels = np.array(true_labels)
+
+    # Calculate metrics
+    accuracy = accuracy_score(true_labels, predictions)
+    precision = precision_score(true_labels, predictions, average="macro")
+    recall = recall_score(true_labels, predictions, average="macro")
+    f1 = f1_score(true_labels, predictions, average="macro")
+    conf_matrix = confusion_matrix(true_labels, predictions)
+
+    return {
+        "accuracy": accuracy,
+        "precision": precision,
+        "recall": recall,
+        "f1_score": f1,
+        "confusion_matrix": conf_matrix.tolist()  # Ensure JSON serializability
+    }
