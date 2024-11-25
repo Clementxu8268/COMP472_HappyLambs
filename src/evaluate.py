@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
+
 import joblib
 from utils.eval_utils import evaluate_model
 from utils.plot_utils import plot_confusion_matrix
@@ -7,7 +11,6 @@ def evaluate_saved_models(test_features, test_labels):
     models = {
         "DecisionTree_Python": "checkpoints/DecisionTree_Python.pkl",
         "DecisionTree_Sklearn": "checkpoints/DecisionTree_Sklearn.pkl",
-        # TODO add other models
     }
 
     # Save results
