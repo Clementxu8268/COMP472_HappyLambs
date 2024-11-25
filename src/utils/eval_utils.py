@@ -45,35 +45,42 @@ def evaluate_model(model, test_features, test_labels, model_type="sklearn", test
     }
 
 
-def save_model_and_results(model, results, model_name, model_type="sklearn"):
+def save_model_and_results(model, results, model_name, model_type="sklearn", checkpoints_dir="checkpoints", results_dir="results"):
     """
-    Save model and result of evaluation
+    Save model and evaluation results.
+
+    Args:
+        model: Trained model (Scikit-learn or PyTorch).
+        results: Dictionary containing evaluation metrics.
+        model_name: Name of the model.
+        model_type: "sklearn" or "torch".
+        checkpoints_dir: Directory to save model files.
+        results_dir: Directory to save results files.
     """
+    # Ensure directories exist
+    os.makedirs(checkpoints_dir, exist_ok=True)
+    os.makedirs(results_dir, exist_ok=True)
 
-    # Create checkpoints folder if it is not there
-    os.makedirs('checkpoints', exist_ok=True)
-
-    # Save mode
+    # Save model
     if model_type == "sklearn":
-        # Save scikit-learn model as .pkl file
-        model_path = f'checkpoints/{model_name}.pkl'
+        model_path = os.path.join(checkpoints_dir, f"{model_name}.pkl")
         with open(model_path, 'wb') as f:
             pickle.dump(model, f)
     elif model_type == "torch":
-        # Save PyTorch model as .pth file
-        model_path = f'checkpoints/{model_name}.pth'
+        model_path = os.path.join(checkpoints_dir, f"{model_name}.pth")
         torch.save(model.state_dict(), model_path)
 
-    # Convert numpy.ndarray to list for JSON
-    results_serializable = {key: value.tolist() if isinstance(value, np.ndarray) else value for key, value in
-                            results.items()}
+    print(f"Model saved to {model_path}")
 
-    # Save result as JSON
-    results_path = f'checkpoints/{model_name}_results.json'
+    # Convert numpy.ndarray to list for JSON
+    results_serializable = {key: value.tolist() if isinstance(value, np.ndarray) else value for key, value in results.items()}
+
+    # Save results as JSON
+    results_path = os.path.join(results_dir, f"{model_name}_results.json")
     with open(results_path, 'w') as f:
         json.dump(results_serializable, f, indent=4)
 
-    print(f"Model and results saved as {model_name}.pkl (or .pth) and {model_name}_results.json in checkpoints/ directory.")
+    print(f"Results saved to {results_path}")
 
 def print_saved_results(checkpoints_dir, results_dir, show_confusion_matrix=False):
     """
@@ -175,6 +182,51 @@ def evaluate_mlp(model, test_loader, device):
     recall = recall_score(true_labels, predictions, average="macro")
     f1 = f1_score(true_labels, predictions, average="macro")
     conf_matrix = confusion_matrix(true_labels, predictions)
+
+    return {
+        "accuracy": accuracy,
+        "precision": precision,
+        "recall": recall,
+        "f1_score": f1,
+        "confusion_matrix": conf_matrix.tolist()  # Ensure JSON serializability
+    }
+
+def evaluate_model_generic(model, test_loader, device, model_name="Model"):
+    """
+    Evaluate the performance of a PyTorch model.
+
+    Args:
+        model (torch.nn.Module): The trained model (e.g., VGG11, MLP).
+        test_loader (DataLoader): DataLoader containing the test dataset.
+        device (torch.device): The device (CPU or GPU) to perform evaluation.
+        model_name (str): Name of the model (for logging or reporting purposes).
+
+    Returns:
+        dict: A dictionary containing accuracy, precision, recall, F1-score, and confusion matrix.
+    """
+    model.eval()
+    predictions, true_labels = [], []
+
+    with torch.no_grad():
+        for inputs, labels in test_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs = model(inputs)
+            preds = torch.argmax(outputs, dim=1)
+            predictions.extend(preds.cpu().numpy())
+            true_labels.extend(labels.cpu().numpy())
+
+    predictions = np.array(predictions)
+    true_labels = np.array(true_labels)
+
+    # Calculate metrics
+    accuracy = accuracy_score(true_labels, predictions)
+    precision = precision_score(true_labels, predictions, average="macro")
+    recall = recall_score(true_labels, predictions, average="macro")
+    f1 = f1_score(true_labels, predictions, average="macro")
+    conf_matrix = confusion_matrix(true_labels, predictions)
+
+    print(f"\nEvaluation Results for {model_name}:")
+    print(f"Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1-Score: {f1:.4f}")
 
     return {
         "accuracy": accuracy,
